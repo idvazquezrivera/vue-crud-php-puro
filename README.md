@@ -9,12 +9,12 @@ git clone https://github.com/idvazquezrivera/vue-crud-php-puro.git
 ```
 2. Move code to server
 
-2.1 Apache
+- Apache
 ```console
 mv vue-crud-php-puro /var/www/
-```
+  ```
 
-2.2 MAMP
+- MAMP
 ```console
 mv vue-crud-php-puro /Applications/MAMP/htdocs/
 ```
