@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Document</title>
+	<script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+	<!-- Add this to <head> -->
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	<!-- Load required Bootstrap and BootstrapVue CSS -->
+	<link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+	<link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
+
+	<!-- Load polyfills to support older browsers -->
+	<script src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver" crossorigin="anonymous"></script>
+
+	<!-- Load Vue followed by BootstrapVue -->
+	<script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.15/lodash.min.js"></script>
+	<!-- Load the following for BootstrapVueIcons support -->
+	<script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+  
+	<style>
+		.close{
+			display: none !important;
+		}
+		.sp{
+			position: fixed;
+			left: 0;
+			width: 100%;
+			top: 0;
+			text-align: center;
+			padding-top: 50%;
+			background: #000000c7;
+			height: 100%;
+			z-index: 1;
+			color: white;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<b-navbar toggleable="lg" type="dark" variant="dark">
+			<b-container fluid>
+				<b-navbar-brand href="#">Cliente</b-navbar-brand>
+				<b-button v-b-modal.my_modal>+ Nuevo</b-button> 
+			</b-container> 
+		</b-navbar> 
+		<div v-if="loading" class="d-flex justify-content-center sp mb-3">
+			<b-spinner></b-spinner>
+		</div>
+		<b-table  v-if="!loading"  stacked :items="clientes">
+			<template #cell(nombres)="data">
+				<!-- `data.value` is the value after formatted by the Formatter -->
+				<a :href="`#${data.value.replace(/[^a-z]+/i,'-').toLowerCase()}`">{{ data.value }}</a>
+			</template>
+			<template #cell(actions)="data">
+        <b-button-group>
+          <a class="btn btn-outline-primary btn-sm" v-on:click="update(data.value.update)"><b-icon icon="pencil-fill"></b-icon></a>
+          <a class="btn btn-outline-danger btn-sm" v-on:click="remove(data.value.delete)"><b-icon icon="trash-fill"></b-icon></a>
+        </b-button-group>
+      </template>
+		</b-table>
+
+		<b-modal id="my_modal" my_modal=true modal-header-close="no" ref="modal" title="Clientes" @show="resetModal" @hidden="resetModal" @ok="handleOk">
+			<form ref="form" @submit.stop.prevent="handleSubmit">
+        <input type="hidden" v-model="cliente.id">
+				<b-form-group label="Nombre" label-for="nombres" invalid-feedback="Nombre es un campo requerido" :state="cliente.nombres.state">
+					<b-form-input	id="nombres" v-on:blur="check('nombres')" v-model="cliente.nombres.value" :state="cliente.nombres.state" required></b-form-input>
+				</b-form-group>
+				<b-form-group label="Apellido paterno" label-for="apellido_paterno" invalid-feedback="Apellido paterno es un campo requerido" :state="cliente.apellido_paterno.state">
+					<b-form-input	id="apellido_paterno" v-on:blur="check('apellido_paterno')" v-model="cliente.apellido_paterno.value" :state="cliente.apellido_paterno.state" required></b-form-input>
+				</b-form-group>
+				<b-form-group label="Apellido materno" label-for="apellido_materno" invalid-feedback="Apellido materno es un campo requerido" :state="cliente.apellido_materno.state">
+					<b-form-input	id="apellido_materno" v-on:blur="check('apellido_materno')" v-model="cliente.apellido_materno.value" :state="cliente.apellido_materno.state" required></b-form-input>
+				</b-form-group>
+				<b-form-group label="Domicilio" label-for="domicilio" invalid-feedback="Domicilio es un campo requerido" :state="cliente.domicilio.state">
+					<b-form-input	id="domicilio" v-on:blur="check('domicilio')" v-model="cliente.domicilio.value" :state="cliente.domicilio.state" required></b-form-input>
+				</b-form-group>
+				<b-form-group label="Correo" label-for="correo" invalid-feedback="Ecribe un correo valido." :state="cliente.correo.state">
+					<b-form-input	id="correo" v-on:blur="check('correo')" v-model="cliente.correo.value" type="email" :state="cliente.correo.state" placeholder="ejemplo@correo.com " required></b-form-input>
+				</b-form-group>
+			</form>
+		</b-modal>
+
+ 	</div>
+</body>
+<script>
+window.onload = () => {
+	new Vue({
+			el: "#app",
+			data() {
+				return {
+           
+					loading: false,
+					clientes: [],
+					cliente: {
+            id:null,
+						nombres: {
+							value: '', 
+							state:null
+						},
+						apellido_paterno: {
+							value: '', 
+							state:null
+						},
+						apellido_materno: {
+							value: '', 
+							state:null
+						},
+						domicilio: {
+							value: '', 
+							state:null
+						},
+						correo: {
+							value: '', 
+							state:null
+						},
+					}
+ 				}
+			},
+			created() {
+ 				this.read_request();
+			},
+ 
+			methods: {
+        create_request(){
+          let self = this;
+					this.loading = true;
+					axios.post('crud/create.php',this.cliente).then(response => {
+						self.read_request();
+					}).catch(error => {
+						this.errored = true
+					}).finally(() => this.loading = false)
+        },
+				read_request(){
+					axios.get('crud/read.php').then(response => {
+						this.clientes = []
+						for(x in response.data){
+							response.data[x]['actions'] = {update: response.data[x].id, delete: response.data[x].id}
+							this.clientes.push(response.data[x])
+						}
+					}).catch(error => {
+						this.errored = true
+					}).finally(() => this.loading = false)
+				},
+        get_client_request(id){
+          let self = this;
+          axios.post('crud/read.php',{id:id}).then(response => {
+            self.cliente = {
+              id: response.data.id,
+              nombres: {
+                value: response.data.nombres, 
+                state:null
+              },
+              apellido_paterno: {
+                value: response.data.apellido_paterno, 
+                state:null
+              },
+              apellido_materno: {
+                value: response.data.apellido_materno, 
+                state:null
+              },
+              domicilio: {
+                value: response.data.domicilio, 
+                state:null
+              },
+              correo: {
+                value: response.data.correo, 
+                state:null
+              },
+					  }
+					}).catch(error => {
+						this.errored = true
+					}).finally(() => this.loading = false)
+        },
+        update_request(id){
+          let self = this;
+					this.loading = true;
+					axios.post('crud/update.php',this.cliente).then(response => {
+						self.read_request();
+					}).catch(error => {
+						this.errored = true
+					}).finally(() => this.loading = false)
+        },
+				update(id){
+          this.get_client_request(id)
+          this.$bvModal.show('my_modal')
+          console.log('update', id)
+        },
+        remove_request(id){
+          let self = this;
+					this.loading = true;
+					axios.post('crud/delete.php',{id: this.cliente.id}).then(response => {
+						self.read_request();
+					}).catch(error => {
+						this.errored = true
+					}).finally(() => this.loading = false)
+        },
+        remove(id){
+          let self = this;
+          self.get_client_request(id)
+          setTimeout(function(){
+             self.$bvModal.msgBoxConfirm('Eliminar a ' +self.cliente.nombres.value+ ' ' +self.cliente.apellido_paterno.value+ ', ' +self.cliente.apellido_materno.value+'?', {
+              title: 'Confirmar cliente #'+self.cliente.id,
+              size: 'md',
+              buttonSize: 'md',
+              okVariant: 'danger',
+              okTitle: 'Si',
+              cancelTitle: 'No',
+              footerClass: 'p-2',
+              hideHeaderClose: false,
+              centered: true
+            }).then(value => {
+                if(value){
+                  self.remove_request()
+                }
+            }).catch(err => {
+                // An error occurred
+            })
+          },1000)
+          console.log('delete', id)
+        },
+        check(input) {
+					this.cliente[input].state = document.getElementById(input).checkValidity()
+				},
+				checkFormValidity() {
+					this.cliente.nombres.state = document.getElementById('nombres').checkValidity()
+					this.cliente.apellido_paterno.state = document.getElementById('apellido_paterno').checkValidity()
+					this.cliente.apellido_materno.state = document.getElementById('apellido_materno').checkValidity()
+					this.cliente.domicilio.state = document.getElementById('domicilio').checkValidity()
+					this.cliente.correo.state = document.getElementById('correo').checkValidity()
+
+					return this.cliente.nombres.state && 
+									this.cliente.apellido_paterno.state && 
+									this.cliente.apellido_materno.state && 
+									this.cliente.domicilio.state && 
+									this.cliente.correo.state
+				},
+				resetInfoModal() {
+					this.infoModal.title = ''
+					this.infoModal.content = ''
+				},
+				resetModal() {
+					this.cliente = {
+						nombres: {
+							value: '', 
+							state:null
+						},
+						apellido_paterno: {
+							value: '', 
+							state:null
+						},
+						apellido_materno: {
+							value: '', 
+							state:null
+						},
+						domicilio: {
+							value: '', 
+							state:null
+						},
+						correo: {
+							value: '', 
+							state:null
+						},
+					}
+				},
+				handleOk(bvModalEvent) {
+					// Prevent modal from closing
+					bvModalEvent.preventDefault()
+					// Trigger submit handler
+					this.handleSubmit()
+				},
+				handleSubmit() {
+					// Exit when the form isn't valid
+					if (!this.checkFormValidity()) {
+						return
+					}
+          console.log(this.cliente)
+          if(this.cliente.id)
+            this.update_request()
+          else
+					  this.create_request()
+					// Hide the modal manually
+					this.$nextTick(() => {
+						this.$bvModal.hide('my_modal')
+					})
+				}
+			}
+	});
+};
+
+</script>
+</html> 
+ 
